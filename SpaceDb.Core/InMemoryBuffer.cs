@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+﻿using System;
 
 namespace SpaceDb.Core;
 
@@ -6,6 +6,7 @@ public class InMemoryBuffer
 {
     private readonly List<Entity> _entities;
     private readonly string _dataFilePath;
+    private readonly object _lock = new object();
 
     public InMemoryBuffer(string dataFilePath)
     {
@@ -15,21 +16,41 @@ public class InMemoryBuffer
 
     public void Add(Entity entity)
     {
-        _entities.Add(entity);
+        lock (_lock)
+        {
+            _entities.Add(entity);
+        }
     }
 
     public void FlushToFile()
     {
-        using var stream = new FileStream(_dataFilePath, FileMode.Create, FileAccess.Write);
-        using var writer = new StreamWriter(stream);
-        foreach (var entity in _entities)
+        lock (_lock)
         {
-            writer.WriteLine(JsonSerializer.Serialize(entity));
+            using (var stream = new FileStream(_dataFilePath, FileMode.Append, FileAccess.Write))
+            using (var writer = new BinaryWriter(stream))
+            {
+                foreach (var entity in _entities)
+                {
+                    entity.WriteToBinaryWriter(writer);
+                }
+                _entities.Clear();
+            }
         }
     }
 
     public IEnumerable<Entity> GetEntities()
     {
-        return _entities;
+        lock (_lock)
+        {
+            return _entities;
+        }
+    }
+
+    public IEnumerable<Entity> Query(long start, long end)
+    {
+        lock (_lock)
+        {
+            return _entities.Where(x => x.Timestamp >= start && x.Timestamp <= end);
+        }
     }
 }

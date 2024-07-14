@@ -1,13 +1,11 @@
-﻿using System.Text.Json;
-using NetTopologySuite.Geometries;
+﻿using NetTopologySuite.Geometries;
 
 namespace SpaceDb.Core;
 
 public class IndexFile
 {
     private readonly string _filePath;
-    private readonly List<long> _offsets; // List of offsets in the data file
-
+    private readonly List<long> _offsets;
     public IndexFile(string filePath)
     {
         _filePath = filePath;
@@ -27,6 +25,8 @@ public class IndexFile
         {
             writer.Write(offset);
         }
+
+        _offsets.Clear();
     }
 
     public void LoadIndex()
@@ -48,20 +48,20 @@ public class IndexFile
 
         foreach (var offset in _offsets)
         {
-            using var stream = new FileStream(dataFilePath, FileMode.Open, FileAccess.Read);
-            using var reader = new StreamReader(stream);
-            reader.BaseStream.Seek(offset, SeekOrigin.Begin);
-            var json = reader.ReadLine();
-            if (string.IsNullOrWhiteSpace(json)) continue;
-
-            var entity = JsonSerializer.Deserialize<Entity>(json);
-            if (entity == null) continue;
-
-            var point = new Point(entity.Longitude, entity.Latitude);
-
-            if (searchPolygon.Contains(point))
+            using (var stream = new FileStream(dataFilePath, FileMode.Open, FileAccess.Read))
+            using (var reader = new BinaryReader(stream))
             {
-                entities.Add(entity);
+                reader.BaseStream.Seek(offset, SeekOrigin.Begin);
+                var entity = Entity.ReadFromBinaryReader(reader);
+                if (entity == null) continue;
+
+                var point = new Point(entity.Longitude, entity.Latitude);
+
+                // Ensure that 'Contains' is used correctly
+                if (searchPolygon.Contains(point))
+                {
+                    entities.Add(entity);
+                }
             }
         }
 
@@ -74,21 +74,19 @@ public class IndexFile
 
         foreach (var offset in _offsets)
         {
-            using var stream = new FileStream(dataFilePath, FileMode.Open, FileAccess.Read);
-            using var reader = new StreamReader(stream);
-            reader.BaseStream.Seek(offset, SeekOrigin.Begin);
-            var json = reader.ReadLine();
-            if (string.IsNullOrWhiteSpace(json)) continue;
-            var entity = JsonSerializer.Deserialize<Entity>(json);
-
-            if (entity == null)
+            using (var stream = new FileStream(dataFilePath, FileMode.Open, FileAccess.Read))
+            using (var reader = new BinaryReader(stream))
             {
-                continue;
-            }
+                reader.BaseStream.Seek(offset, SeekOrigin.Begin);
+                var entity = Entity.ReadFromBinaryReader(reader);
+                if (entity == null) continue;
 
-            if (searchRectangle.Contains(entity))
-            {
-                entities.Add(entity);
+                var point = new Point(entity.Longitude, entity.Latitude);
+
+                if (searchRectangle.Contains(entity))
+                {
+                    entities.Add(entity);
+                }
             }
         }
 
