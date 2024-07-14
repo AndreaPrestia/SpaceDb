@@ -52,7 +52,7 @@ public class IndexFile
             using var reader = new StreamReader(stream);
             reader.BaseStream.Seek(offset, SeekOrigin.Begin);
             var json = reader.ReadLine();
-            if (json == null) continue;
+            if (string.IsNullOrWhiteSpace(json)) continue;
 
             var entity = JsonSerializer.Deserialize<Entity>(json);
             if (entity == null) continue;
@@ -78,7 +78,7 @@ public class IndexFile
             using var reader = new StreamReader(stream);
             reader.BaseStream.Seek(offset, SeekOrigin.Begin);
             var json = reader.ReadLine();
-            if (json == null) continue;
+            if (string.IsNullOrWhiteSpace(json)) continue;
             var entity = JsonSerializer.Deserialize<Entity>(json);
 
             if (entity == null)

@@ -37,15 +37,31 @@ class Program
             long offset = 0;
             while (!reader.EndOfStream)
             {
-                // Store the current offset before reading the line
                 indexFile.AddToIndex(offset);
 
-                // Read the current line and calculate the length of the line including newline characters
                 var line = reader.ReadLine();
                 if (line == null) break;
 
-                // Update the offset to the end of the current line
-                offset = reader.BaseStream.Position;
+                // Calculate the length of the line including newline characters
+                long lineLength = line.Length;
+                if (reader.BaseStream.Position < reader.BaseStream.Length)
+                {
+                    // Check the next character to determine if it's a newline
+                    var nextChar = reader.Peek();
+                    if (nextChar == '\r' || nextChar == '\n')
+                    {
+                        lineLength++;
+                        reader.Read(); // Read the newline character
+                        if (nextChar == '\r' && reader.Peek() == '\n')
+                        {
+                            lineLength++;
+                            reader.Read(); // Read the \n character after \r
+                        }
+                    }
+                }
+
+                // Update offset to the beginning of the next line
+                offset += lineLength;
             }
         }
 
@@ -57,11 +73,11 @@ class Program
         // Define a polygon (e.g., a rough bounding polygon around the US mainland)
         var coordinates = new[]
         {
-            new Coordinate(-130, 30),
-            new Coordinate(-130, 50),
-            new Coordinate(-110, 50),
-            new Coordinate(-110, 30),
-            new Coordinate(-130, 30)
+            new Coordinate(-130, 30),  // Southwest
+            new Coordinate(-130, 50),  // Northwest
+            new Coordinate(-110, 50),  // Northeast
+            new Coordinate(-110, 30),  // Southeast
+            new Coordinate(-130, 30)   // Back to Southwest
         };
         var polygon = new Polygon(new LinearRing(coordinates));
 
