@@ -1,4 +1,5 @@
-﻿using NetTopologySuite.Geometries;
+﻿using System.Text.Json;
+using NetTopologySuite.Geometries;
 
 namespace SpaceDb.Core;
 
@@ -48,17 +49,18 @@ public class IndexFile
         foreach (var offset in _offsets)
         {
             using var stream = new FileStream(dataFilePath, FileMode.Open, FileAccess.Read);
-            using var reader = new BinaryReader(stream);
+            using var reader = new StreamReader(stream);
             reader.BaseStream.Seek(offset, SeekOrigin.Begin);
-            var timestamp = reader.ReadInt64();
-            var latitude = reader.ReadDouble();
-            var longitude = reader.ReadDouble();
+            var json = reader.ReadLine();
+            if (json == null) continue;
 
-            var point = new Point(longitude, latitude);
+            var entity = JsonSerializer.Deserialize<Entity>(json);
+            if (entity == null) continue;
+
+            var point = new Point(entity.Longitude, entity.Latitude);
 
             if (searchPolygon.Contains(point))
             {
-                var entity = new Entity(timestamp, latitude, longitude);
                 entities.Add(entity);
             }
         }
@@ -73,13 +75,17 @@ public class IndexFile
         foreach (var offset in _offsets)
         {
             using var stream = new FileStream(dataFilePath, FileMode.Open, FileAccess.Read);
-            using var reader = new BinaryReader(stream);
+            using var reader = new StreamReader(stream);
             reader.BaseStream.Seek(offset, SeekOrigin.Begin);
-            var timestamp = reader.ReadInt64();
-            var latitude = reader.ReadDouble();
-            var longitude = reader.ReadDouble();
+            var json = reader.ReadLine();
+            if (json == null) continue;
+            var entity = JsonSerializer.Deserialize<Entity>(json);
 
-            var entity = new Entity(timestamp, latitude, longitude);
+            if (entity == null)
+            {
+                continue;
+            }
+
             if (searchRectangle.Contains(entity))
             {
                 entities.Add(entity);

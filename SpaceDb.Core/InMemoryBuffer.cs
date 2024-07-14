@@ -1,4 +1,6 @@
-﻿namespace SpaceDb.Core;
+﻿using System.Text.Json;
+
+namespace SpaceDb.Core;
 
 public class InMemoryBuffer
 {
@@ -19,12 +21,10 @@ public class InMemoryBuffer
     public void FlushToFile()
     {
         using var stream = new FileStream(_dataFilePath, FileMode.Create, FileAccess.Write);
-        using var writer = new BinaryWriter(stream);
+        using var writer = new StreamWriter(stream);
         foreach (var entity in _entities)
         {
-            writer.Write(entity.Timestamp);
-            writer.Write(entity.Latitude);
-            writer.Write(entity.Longitude);
+            writer.WriteLine(JsonSerializer.Serialize(entity));
         }
     }
 
