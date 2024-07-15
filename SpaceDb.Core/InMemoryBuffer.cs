@@ -38,14 +38,6 @@ public class InMemoryBuffer
         }
     }
 
-    public IEnumerable<Entity> GetEntities()
-    {
-        lock (_lock)
-        {
-            return _entities;
-        }
-    }
-
     public IEnumerable<Entity> Query(long start, long end)
     {
         lock (_lock)

@@ -4,6 +4,8 @@ public class TimeseriesIndex
 {
     private readonly string _timeseriesIndexPath;
     private readonly Dictionary<long, List<long>> _timestampOffsets;
+    private readonly object _lock = new object();
+    private bool _isInitialized;
 
     public TimeseriesIndex(string timeseriesIndexPath)
     {
@@ -11,8 +13,8 @@ public class TimeseriesIndex
         _timestampOffsets = new Dictionary<long, List<long>>();
     }
 
-    private readonly object _lock = new object();
-
+    public bool Initialized => _isInitialized;
+    
     public void Add(long timestamp)
     {
         lock (_lock)
@@ -36,23 +38,28 @@ public class TimeseriesIndex
     {
         lock (_lock)
         {
-            long offset = 0;
-            using (var stream = new FileStream(_timeseriesIndexPath, FileMode.Open, FileAccess.Read))
-            using (var reader = new BinaryReader(stream))
+            if(!_isInitialized)
             {
-                while (reader.BaseStream.Position != reader.BaseStream.Length)
+                long offset = 0;
+                using (var stream = new FileStream(_timeseriesIndexPath, FileMode.Open, FileAccess.Read))
+                using (var reader = new BinaryReader(stream))
                 {
-                    var timestamp = reader.ReadInt64();
-
-                    if (!_timestampOffsets.ContainsKey(timestamp))
+                    while (reader.BaseStream.Position != reader.BaseStream.Length)
                     {
-                        _timestampOffsets.Add(timestamp, new List<long>());
+                        var timestamp = reader.ReadInt64();
+
+                        if (!_timestampOffsets.ContainsKey(timestamp))
+                        {
+                            _timestampOffsets.Add(timestamp, new List<long>());
+                        }
+
+                        _timestampOffsets[timestamp].Add(offset);
+
+                        offset = reader.BaseStream.Position;
                     }
-
-                    _timestampOffsets[timestamp].Add(offset);
-
-                    offset = reader.BaseStream.Position;
                 }
+
+                _isInitialized = true;
             }
         }
     }
