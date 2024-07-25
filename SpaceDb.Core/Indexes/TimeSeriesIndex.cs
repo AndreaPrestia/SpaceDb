@@ -12,11 +12,11 @@ public class TimeSeriesIndex
         _offsets = new Dictionary<long, List<long>>();
     }
 
-    public void Add(long timestamp, long offset)
+    internal void Add(long timestamp, long offset)
     {
         lock (_lock)
         {
-            if (_offsets.Any())
+            if (!_offsets.Any())
             {
                 LoadIndex();
             }
@@ -41,7 +41,7 @@ public class TimeSeriesIndex
         }
     }
 
-    public List<long> Offsets(long start, long end, int limit)
+    internal List<long> Offsets(long start, long end, int limit)
     {
         lock (_lock)
         {
@@ -60,7 +60,7 @@ public class TimeSeriesIndex
     private void LoadIndex()
     {
         long offset = 0;
-        using var stream = new FileStream(_timeSeriesIndexPath, FileMode.Open, FileAccess.Read);
+        using var stream = new FileStream(_timeSeriesIndexPath, FileMode.OpenOrCreate, FileAccess.Read);
         using var reader = new BinaryReader(stream);
         while (reader.BaseStream.Position != reader.BaseStream.Length)
         {
