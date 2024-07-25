@@ -70,7 +70,7 @@ public class RepositoryTests
         Assert.NotNull(foundEntitiesWithPosition);
         Assert.Collection(foundEntitiesWithPosition, entity =>
         {
-            var entityToCompare = entities.ElementAtOrDefault(1);
+            var entityToCompare = entities.ElementAtOrDefault(0);
             Assert.NotNull(entityToCompare);
             Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
             Assert.Equal(entityToCompare.Latitude, entity.Latitude);
