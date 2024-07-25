@@ -1,5 +1,7 @@
-﻿using NetTopologySuite.Geometries;
-using SpaceDb.Core;
+﻿using SpaceDb.Core;
+using SpaceDb.Core.Indexes;
+
+namespace SpaceDb.Console;
 
 class Program
 {
@@ -7,72 +9,49 @@ class Program
     {
         const string dataFilePath = "data.dat";
         const string indexFilePath = "index.dat";
+        const string timeSeriesIndexFilePath = "timeSeriesIndex.dat";
 
-        // Create an in-memory buffer and add some sample data
-        var inMemoryBuffer = new InMemoryBuffer(dataFilePath);
+        var timeSeriesIndex = new TimeSeriesIndex(timeSeriesIndexFilePath);
+        var spatialIndex = new SpatialIndex(indexFilePath);
+
+        var repository = new Repository(dataFilePath, timeSeriesIndex, spatialIndex);
         var entities = new List<Entity>
         {
-            new Entity(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), 37.7749, -122.4194, "San Francisco"),
-            new Entity(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), 34.0522, -118.2437, "Los Angeles"),
-            new Entity(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), 40.7128, -74.0060, "New York"),
-            new Entity(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), 41.8781, -87.6298, "Chicago"),
-            new Entity(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), 51.5074, -0.1278, "London"),
-            new Entity(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), -33.8688, 151.2093, "Sydney")
+            new(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 37.7749, -122.4194, "San Francisco"),
+            new(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 34.0522, -118.2437, "Los Angeles"),
+            new(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 40.7128, -74.0060, "New York"),
+            new(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 41.8781, -87.6298, "Chicago"),
+            new(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 51.5074, -0.1278, "London"),
+            new(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), -33.8688, 151.2093, "Sydney")
         };
 
         foreach (var entity in entities)
         {
-            inMemoryBuffer.Add(entity);
+            repository.Add(entity);
         }
 
-        // Periodically flush the in-memory buffer to file
-        inMemoryBuffer.FlushToFile();
+        // Query with position
+        var foundEntitiesWithPosition = repository.Find(37.7586889, -122.317707, 50000, 10);
 
-        // Create and populate the index
-        var indexFile = new IndexFile(indexFilePath);
+        var end = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        using (var stream = new FileStream(dataFilePath, FileMode.Open, FileAccess.Read))
-        using (var reader = new BinaryReader(stream))
+        var start = DateTimeOffset.UtcNow.AddMinutes(3).ToUnixTimeMilliseconds();
+        // Query with timestamp
+        var foundEntitiesByRange = repository.Find(start, end, 10);
+
+        // Print found entities for position query
+        foreach (var entity in foundEntitiesWithPosition)
         {
-            long offset = 0;
-            while (reader.BaseStream.Position != reader.BaseStream.Length)
-            {
-                indexFile.AddToIndex(offset);
-
-                // Read the entity to calculate the offset for the next entity
-                var entity = Entity.ReadFromBinaryReader(reader);
-                offset = reader.BaseStream.Position;
-            }
+            System.Console.WriteLine($"Entities by Position Query - Found Entity: Name={entity.Name} Timestamp={entity.Timestamp}, Lat={entity.Latitude}, Lon={entity.Longitude}, Properties={string.Join(", ", entity.Properties)}");
         }
 
-        indexFile.SaveIndex();
-
-        // Load the index
-        indexFile.LoadIndex();
-
-        // Define a polygon (e.g., a rough bounding polygon around the US mainland)
-        var coordinates = new[]
+        // Print found entities for timeseries query
+        foreach (var entity in foundEntitiesByRange)
         {
-            new Coordinate(-130, 30),
-            new Coordinate(-130, 50),
-            new Coordinate(-110, 50),
-            new Coordinate(-110, 30),
-            new Coordinate(-130, 30)
-        };
-        var polygon = new Polygon(new LinearRing(coordinates));
-
-        // Query with a polygon
-        var foundEntities = indexFile.QueryPolygon(polygon, dataFilePath);
-
-        // Print found entities for polygon query
-        foreach (var entity in foundEntities)
-        {
-            Console.WriteLine($"Polygon Query - Found Entity: Name={entity.Name} Timestamp={entity.Timestamp}, Lat={entity.Latitude}, Lon={entity.Longitude}, Properties={string.Join(", ", entity.Properties)}");
+            System.Console.WriteLine($"Entities by TimeSeries Query - Found Entity: Name={entity.Name} Timestamp={entity.Timestamp}, Lat={entity.Latitude}, Lon={entity.Longitude}, Properties={string.Join(", ", entity.Properties)}");
         }
 
-        Console.WriteLine("Press Enter to exit");
-        Console.ReadLine();
+        System.Console.WriteLine("Press Enter to exit");
+        System.Console.ReadLine();
     }
 }
-
-

@@ -1,64 +1,69 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using SpaceDb.Core.Indexes;
+using SpaceDb.Core.Utils;
 
-namespace SpaceDb.Core
+namespace SpaceDb.Core;
+
+public sealed class Repository
 {
-    public sealed class Repository
+    private readonly string _dataFilePath;
+    private readonly TimeSeriesIndex _timeSeriesIndex;
+    private readonly SpatialIndex _indexFile;
+    private readonly object _lock = new object();
+
+    public Repository(string dataFilePath, TimeSeriesIndex timeSeriesIndex, SpatialIndex indexFile)
     {
-        private readonly string _dataFilePath;
-        private readonly TimeseriesIndex _timeSeriesIndex;
-        private readonly SpatialIndex _spatialIndex;
-        private readonly ILogger<Repository> _logger;
+        _dataFilePath = dataFilePath;
+        _timeSeriesIndex = timeSeriesIndex;
+        _indexFile = indexFile;
+    }
 
-        public Repository(string dataFilePath, TimeseriesIndex timeSeriesIndex, SpatialIndex spatialIndex, ILogger<Repository> logger)
+    public void Add(Entity entity)
+    {
+        lock (_lock)
         {
-            _dataFilePath = dataFilePath;
-            _timeSeriesIndex = timeSeriesIndex;
-            _spatialIndex = spatialIndex;
-            _logger = logger;
+            using var stream = new FileStream(_dataFilePath, FileMode.Append, FileAccess.Write);
+            using var writer = new BinaryWriter(stream);
+            entity.WriteToBinaryWriter(writer);
+            _timeSeriesIndex.Add(entity.Timestamp, writer.BaseStream.Position);
+            _indexFile.Add(entity.Latitude, entity.Longitude, writer.BaseStream.Position);
         }
-
-        public IList<Entity> Find(long start, long end)
+    }
+    public IList<Entity> Find(long start, long end, int limit)
+    {
+        lock (_lock)
         {
-            if (!_timeSeriesIndex.Initialized)
-            {
-                _timeSeriesIndex.InitIndex();
-            }
+            List<Entity> entities = new();
 
-            List<Entity> entities = new List<Entity>();
+            var offsets = _timeSeriesIndex.Offsets(start, end, limit);
 
-            var offsets = _timeSeriesIndex.Offsets(start, end);
-
-            if(offsets != null && offsets.Any()) 
+            if (offsets.Any())
             {
                 foreach (var offset in offsets)
                 {
                     try
                     {
-                        using (var stream = new FileStream(_dataFilePath, FileMode.Open, FileAccess.Read))
-                        using (var reader = new BinaryReader(stream))
+                        using var stream = new FileStream(_dataFilePath, FileMode.Open, FileAccess.Read);
+                        using var reader = new BinaryReader(stream);
+                        reader.BaseStream.Seek(offset, SeekOrigin.Begin);
+                        var entity = Entity.ReadFromBinaryReader(reader);
+                        if (entity == null!) continue;
+
+                        if (entity.Timestamp >= start && entity.Timestamp <= end)
                         {
-                            reader.BaseStream.Seek(offset, SeekOrigin.Begin);
-                            var entity = Entity.ReadFromBinaryReader(reader);
-                            if (entity == null) continue;
-
-                            if (entity.Timestamp >= start && entity.Timestamp <= end)
-                            {
-                                entities.Add(entity);
-                            }
+                            entities.Add(entity);
                         }
-
                     }
                     catch (FileNotFoundException)
                     {
-                        _logger.LogError($"Error: The file {_dataFilePath} does not exist.");
+                        Console.Error.WriteLine($"Error: The file {_dataFilePath} does not exist.");
                     }
                     catch (IOException e)
                     {
-                        _logger.LogError($"Error: An I/O error occurred. {e.Message}");
+                        Console.Error.WriteLine($"Error: An I/O error occurred. {e.Message}");
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError($"An unexpected error occurred. {e.Message}");
+                        Console.Error.WriteLine($"An unexpected error occurred. {e.Message}");
                     }
                 }
             }
@@ -66,33 +71,101 @@ namespace SpaceDb.Core
             {
                 try
                 {
-                    using (var stream = new FileStream(_dataFilePath, FileMode.Open, FileAccess.Read))
-                    using (var reader = new BinaryReader(stream))
+                    using var stream = new FileStream(_dataFilePath, FileMode.Open, FileAccess.Read);
+                    using var reader = new BinaryReader(stream);
+                    while (reader.BaseStream.Position != reader.BaseStream.Length)
                     {
-                        while (reader.BaseStream.Position != reader.BaseStream.Length)
-                        {
-                            var entity = Entity.ReadFromBinaryReader(reader);
-                            if (entity == null) continue;
+                        var entity = Entity.ReadFromBinaryReader(reader);
+                        if (entity == null!) continue;
 
-                            if (entity.Timestamp >= start && entity.Timestamp <= end)
-                            {
-                                entities.Add(entity);
-                            }
+                        if (entity.Timestamp >= start && entity.Timestamp <= end)
+                        {
+                            entities.Add(entity);
                         }
                     }
-
                 }
                 catch (FileNotFoundException)
                 {
-                    _logger.LogError($"Error: The file {_dataFilePath} does not exist.");
+                    Console.Error.WriteLine($"Error: The file {_dataFilePath} does not exist.");
                 }
                 catch (IOException e)
                 {
-                    _logger.LogError($"Error: An I/O error occurred. {e.Message}");
+                    Console.Error.WriteLine($"Error: An I/O error occurred. {e.Message}");
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError($"An unexpected error occurred. {e.Message}");
+                    Console.Error.WriteLine($"An unexpected error occurred. {e.Message}");
+                }
+            }
+
+            return entities;
+        }
+    }
+
+    public IList<Entity> Find(double latitude, double longitude, double rangeInMeters, int limit)
+    {
+        lock (_lock)
+        {
+            List<Entity> entities = new();
+
+            var offsets = _indexFile.Offsets(latitude, longitude, rangeInMeters, limit);
+
+            if (offsets.Any())
+            {
+                foreach (var offset in offsets)
+                {
+                    try
+                    {
+                        using var stream = new FileStream(_dataFilePath, FileMode.Open, FileAccess.Read);
+                        using var reader = new BinaryReader(stream);
+                        reader.BaseStream.Seek(offset, SeekOrigin.Begin);
+                        var entity = Entity.ReadFromBinaryReader(reader);
+                        if (entity == null!) continue;
+
+                        entities.Add(entity);
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        Console.Error.WriteLine($"Error: The file {_dataFilePath} does not exist.");
+                    }
+                    catch (IOException e)
+                    {
+                        Console.Error.WriteLine($"Error: An I/O error occurred. {e.Message}");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.Error.WriteLine($"An unexpected error occurred. {e.Message}");
+                    }
+                }
+            }
+            else
+            {
+                try
+                {
+                    using var stream = new FileStream(_dataFilePath, FileMode.Open, FileAccess.Read);
+                    using var reader = new BinaryReader(stream);
+                    while (reader.BaseStream.Position != reader.BaseStream.Length)
+                    {
+                        var entity = Entity.ReadFromBinaryReader(reader);
+                        if (entity == null!) continue;
+
+                        if (GeoUtils.HaversineDistance(latitude, longitude, entity.Latitude, entity.Longitude) <= rangeInMeters)
+                        {
+                            entities.Add(entity);
+                        }
+                    }
+                }
+                catch (FileNotFoundException)
+                {
+                    Console.Error.WriteLine($"Error: The file {_dataFilePath} does not exist.");
+                }
+                catch (IOException e)
+                {
+                    Console.Error.WriteLine($"Error: An I/O error occurred. {e.Message}");
+                }
+                catch (Exception e)
+                {
+                    Console.Error.WriteLine($"An unexpected error occurred. {e.Message}");
                 }
             }
 

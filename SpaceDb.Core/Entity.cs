@@ -1,11 +1,11 @@
 ﻿namespace SpaceDb.Core;
 
-public class Entity(long timestamp, double latitude, double longitude, string name)
+public record Entity(long Timestamp, double Latitude, double Longitude, string Name)
 {
-    public long Timestamp { get; set; } = timestamp;
-    public double Latitude { get; set; } = latitude;
-    public double Longitude { get; set; } = longitude;
-    public string Name { get; set; } = name;
+    public long Timestamp { get; set; } = Timestamp;
+    public double Latitude { get; set; } = Latitude;
+    public double Longitude { get; set; } = Longitude;
+    public string Name { get; set; } = Name;
     public Dictionary<string, string> Properties { get; set; } = new();
 
     public bool SetProperty(string name, string? value)
@@ -39,29 +39,26 @@ public class Entity(long timestamp, double latitude, double longitude, string na
         writer.Write(Longitude);
         writer.Write(Name);
         writer.Write(Properties.Count);
-        foreach (var kvp in Properties)
+        foreach (var kvp in Properties.Where(kvp => !string.IsNullOrWhiteSpace(kvp.Value)))
         {
-            if (!string.IsNullOrWhiteSpace(kvp.Value))
-            {
-                writer.Write(kvp.Key);
-                writer.Write(kvp.Value);
-            }
+            writer.Write(kvp.Key);
+            writer.Write(kvp.Value);
         }
     }
 
     public static Entity ReadFromBinaryReader(BinaryReader reader)
     {
-        long timestamp = reader.ReadInt64();
-        double latitude = reader.ReadDouble();
-        double longitude = reader.ReadDouble();
-        string name = reader.ReadString();
+        var timestamp = reader.ReadInt64();
+        var latitude = reader.ReadDouble();
+        var longitude = reader.ReadDouble();
+        var name = reader.ReadString();
 
-        int propertyCount = reader.ReadInt32();
+        var propertyCount = reader.ReadInt32();
         var properties = new Dictionary<string, string>();
-        for (int i = 0; i < propertyCount; i++)
+        for (var i = 0; i < propertyCount; i++)
         {
-            string key = reader.ReadString();
-            string value = reader.ReadString();
+            var key = reader.ReadString();
+            var value = reader.ReadString();
             properties[key] = value;
         }
 
