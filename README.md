@@ -1,6 +1,6 @@
 # SpaceDb
 
-An study on spatial database based in .NET.
+A study project on spatial database based in .NET.
 
 The purpose of this project is to study how to implement a solution that is data space-oriented.
 
@@ -47,7 +47,7 @@ The **limit** parameter is used to limit the number of entities returned.
 This method finds a subset of **Entity** classes that are in the **rangeInMeters** of the **latitude** and **longitude** passed as parameters.
 The **limit** parameter is used to limit the number of entities returned.
 
-##TODO
+## TODO
 
     - Better unit testing,
     - Implement a more robust way to manage read/write.
