@@ -39,62 +39,64 @@ public class RepositoryTests
             File.Delete("spatialIndex.dat");
         }
 
-        var entities = new List<Entity<City>>
+        var entities = new List<City>
         {
-            new(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 37.7749, -122.4194)
+            new()
             {
-                Content = new City()
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                Latitude = 37.7749,
+                Longitude = -122.4194,
+                Name = "San Francisco",
+                PoIs = new List<string>()
                 {
-                    Name = "San Francisco",
-                    PoIs = new List<string>()
-                    {
-                        "Golden Gate, Alcatraz, Lombard Street, Fisherman's Warf"
-                    }
+                    "Golden Gate, Alcatraz, Lombard Street, Fisherman's Warf"
                 }
             },
-            new(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 34.0522, -118.2437)
+            new()
             {
-                Content = new City()
-                {
-                    Name = "Los Angeles"
-                }
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                Latitude = 34.0522,
+                Longitude = -118.2437,
+                Name = "Los Angeles"
             },
-            new(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 40.7128, -74.0060)    {
-                Content = new City()
-                {
-                    Name = "New York",
-                    PoIs = new List<string>()
-                    {
-                        "Brooklyn's Bridge, Central Park, Empire State Building, Statue of Liberty, Times Square, Broadway"
-                    }
-                }
-            },
-            new(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 41.8781, -87.6298)
+
+            new()
             {
-                Content = new City()
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                Latitude = 40.7128,
+                Longitude = -74.0060,
+                Name = "New York",
+                PoIs = new List<string>()
                 {
-                    Name = "Chicago"
+                    "Brooklyn's Bridge, Central Park, Empire State Building, Statue of Liberty, Times Square, Broadway"
                 }
             },
-            new(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 51.5074, -0.1278)
+            new()
             {
-                Content = new City()
-                {
-                    Name = "London",
-                    PoIs = new List<string>()
-                    {
-                        "London Tower, London Eye, Tower Bridge, Big Ben"
-                    }
-                }
+
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                Latitude =  41.8781,
+                Longitude = -87.6298,
+                Name = "Chicago"
             },
-            new(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), -33.8688, 151.2093)
+            new()
             {
-                Content = new City()
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                Latitude = 51.5074,
+                Longitude = -0.1278,
+                Name = "London",
+                PoIs = new List<string>()
                 {
-                    Name = "Sydney"
+                    "London Tower, London Eye, Tower Bridge, Big Ben"
                 }
             },
-            new(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), -31.8683, 152.2094)
+            new()
+            {
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                Latitude =  -33.8688,
+                Longitude = 151.2093,
+                Name = "Sydney"
+            }
         };
 
         var repository = _host.Services.GetRequiredService<Repository>();
@@ -123,10 +125,8 @@ public class RepositoryTests
             Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
             Assert.Equal(entityToCompare.Latitude, entity.Latitude);
             Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-            Assert.NotNull(entity.Content);
-            Assert.NotNull(entityToCompare.Content);
-            Assert.Equal(entityToCompare.Content.Name, entity.Content.Name);
-            Assert.True(entityToCompare.Content.PoIs.SequenceEqual(entity.Content.PoIs));
+            Assert.Equal(entityToCompare.Name, entity.Name);
+            Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
         });
 
         Assert.NotNull(foundEntitiesByRange);
@@ -137,10 +137,8 @@ public class RepositoryTests
             Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
             Assert.Equal(entityToCompare.Latitude, entity.Latitude);
             Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-            Assert.NotNull(entity.Content);
-            Assert.NotNull(entityToCompare.Content);
-            Assert.Equal(entityToCompare.Content.Name, entity.Content.Name);
-            Assert.True(entityToCompare.Content.PoIs.SequenceEqual(entity.Content.PoIs));
+            Assert.Equal(entityToCompare.Name, entity.Name);
+            Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
         }, entity =>
         {
             var entityToCompare = entities.ElementAtOrDefault(1);
@@ -148,10 +146,8 @@ public class RepositoryTests
             Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
             Assert.Equal(entityToCompare.Latitude, entity.Latitude);
             Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-            Assert.NotNull(entity.Content);
-            Assert.NotNull(entityToCompare.Content);
-            Assert.Equal(entityToCompare.Content.Name, entity.Content.Name);
-            Assert.True(entityToCompare.Content.PoIs.SequenceEqual(entity.Content.PoIs));
+            Assert.Equal(entityToCompare.Name, entity.Name);
+            Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
         }, entity =>
         {
             var entityToCompare = entities.ElementAtOrDefault(2);
@@ -159,10 +155,8 @@ public class RepositoryTests
             Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
             Assert.Equal(entityToCompare.Latitude, entity.Latitude);
             Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-            Assert.NotNull(entity.Content);
-            Assert.NotNull(entityToCompare.Content);
-            Assert.Equal(entityToCompare.Content.Name, entity.Content.Name);
-            Assert.True(entityToCompare.Content.PoIs.SequenceEqual(entity.Content.PoIs));
+            Assert.Equal(entityToCompare.Name, entity.Name);
+            Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
         }, entity =>
         {
             var entityToCompare = entities.ElementAtOrDefault(3);
@@ -170,10 +164,8 @@ public class RepositoryTests
             Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
             Assert.Equal(entityToCompare.Latitude, entity.Latitude);
             Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-            Assert.NotNull(entity.Content);
-            Assert.NotNull(entityToCompare.Content);
-            Assert.Equal(entityToCompare.Content.Name, entity.Content.Name);
-            Assert.True(entityToCompare.Content.PoIs.SequenceEqual(entity.Content.PoIs));
+            Assert.Equal(entityToCompare.Name, entity.Name);
+            Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
         }, entity =>
         {
             var entityToCompare = entities.ElementAtOrDefault(4);
@@ -181,10 +173,8 @@ public class RepositoryTests
             Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
             Assert.Equal(entityToCompare.Latitude, entity.Latitude);
             Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-            Assert.NotNull(entity.Content);
-            Assert.NotNull(entityToCompare.Content);
-            Assert.Equal(entityToCompare.Content.Name, entity.Content.Name);
-            Assert.True(entityToCompare.Content.PoIs.SequenceEqual(entity.Content.PoIs));
+            Assert.Equal(entityToCompare.Name, entity.Name);
+            Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
         }, entity =>
         {
             var entityToCompare = entities.ElementAtOrDefault(5);
@@ -192,23 +182,25 @@ public class RepositoryTests
             Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
             Assert.Equal(entityToCompare.Latitude, entity.Latitude);
             Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-            Assert.NotNull(entity.Content);
-            Assert.NotNull(entityToCompare.Content);
-            Assert.Equal(entityToCompare.Content.Name, entity.Content.Name);
-            Assert.True(entityToCompare.Content.PoIs.SequenceEqual(entity.Content.PoIs));
-        }, entity =>
-        {
-            var entityToCompare = entities.ElementAtOrDefault(6);
-            Assert.NotNull(entityToCompare);
-            Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
-            Assert.Equal(entityToCompare.Latitude, entity.Latitude);
-            Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-            Assert.Null(entity.Content);
-            Assert.Null(entityToCompare.Content);
+            Assert.Equal(entityToCompare.Name, entity.Name);
+            Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
         });
     }
 
-    public class City
+    [Fact]
+    public void Add_Entity_Null_Ko()
+    {
+        //arrange
+        var service = _host.Services.GetRequiredService<Repository>();
+
+        //act
+        void Action() => service.Add<City>(null!);
+
+        //assert
+        Assert.Throws<ArgumentNullException>(Action);
+    }
+
+    public record City : BaseEntity
     {
         public string Name { get; set; } = string.Empty;
         public List<string> PoIs { get; set; } = new();

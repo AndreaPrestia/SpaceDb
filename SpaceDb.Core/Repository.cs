@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using SpaceDb.Core.Indexes;
+using System.Text.Json;
+using System.Text;
 
 namespace SpaceDb.Core;
 
@@ -26,13 +28,25 @@ public sealed class Repository
         return new Repository(fileName, logger);
     }
 
-    public void Add<T>(Entity<T> entity)
+    /// <summary>
+    /// Adds an entity in the storage
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="entity"></param>
+    /// <exception cref="ArgumentNullException">If entity is null or the database file is not found</exception>
+    /// <exception cref="NotSupportedException">When the entity cannot be serialized</exception>
+    public void Add<T>(T entity) where T : BaseEntity
     {
+        ArgumentNullException.ThrowIfNull(entity);
+
         lock (_lock)
         {
             using var stream = new FileStream(_fileName, FileMode.Append, FileAccess.Write);
             using var writer = new BinaryWriter(stream);
-            entity.WriteToBinaryWriter(writer);
+            var jsonString = JsonSerializer.Serialize(entity);
+            var jsonBytes = Encoding.UTF8.GetBytes(jsonString);
+            writer.Write(jsonBytes.Length);
+            writer.Write(jsonBytes);
             _timeSeriesIndex.Add(entity.Timestamp, _timeSeriesOffset);
             _spatialIndex.Add(entity.Latitude, entity.Longitude, _spatialIndexOffset);
             _timeSeriesOffset = writer.BaseStream.Position;
@@ -40,11 +54,24 @@ public sealed class Repository
         }
     }
 
-    public IList<Entity<T>> Find<T>(long start, long end, int limit)
+    /// <summary>
+    /// Finds a subset of top N records of type T in a time range
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="start"></param>
+    /// <param name="end"></param>
+    /// <param name="limit">if limit is less or equal than 0 or more than 5000 is used 5000 as default</param>
+    /// <returns></returns>
+    public IList<T> Find<T>(long start, long end, int limit) where T : BaseEntity
     {
         lock (_lock)
         {
-            List<Entity<T>> entities = new();
+            if (limit is <= 0 or > 5000)
+            {
+                limit = 5000;
+            }
+
+            List<T> entities = new();
 
             var offsets = _timeSeriesIndex.Offsets(start, end, limit);
 
@@ -57,10 +84,19 @@ public sealed class Repository
                     using var stream = new FileStream(_fileName, FileMode.Open, FileAccess.Read);
                     using var reader = new BinaryReader(stream);
                     reader.BaseStream.Seek(offset, SeekOrigin.Begin);
-                    var entity = Entity<T>.ReadFromBinaryReader(reader);
-                    if (entity == null!) continue;
+                    var length = reader.ReadInt32();
 
-                    entities.Add(entity);
+                    if (length <= 0) continue;
+                    
+                    var jsonBytes = reader.ReadBytes(length);
+                    var jsonString = Encoding.UTF8.GetString(jsonBytes);
+                    if (string.IsNullOrEmpty(jsonString)) continue;
+                    
+                    var content = JsonSerializer.Deserialize<T>(jsonString);
+
+                    if (content == null) continue;
+                    
+                    entities.Add(content);
                 }
                 catch (FileNotFoundException)
                 {
@@ -80,11 +116,30 @@ public sealed class Repository
         }
     }
 
-    public IList<Entity<T>> Find<T>(double latitude, double longitude, double rangeInMeters, int limit)
+    /// <summary>
+    /// Finds a subset of top N records of type T in a geographical range
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="latitude"></param>
+    /// <param name="longitude"></param>
+    /// <param name="rangeInMeters">Range in meters near the latitude/longitude pair provided. If range is less than zero it is used a default range of 10 meters</param>
+    /// <param name="limit">if limit is less or equal than 0 or more than 5000 is used 5000 as default</param>
+    /// <returns></returns>
+    public IList<T> Find<T>(double latitude, double longitude, double rangeInMeters, int limit) where T : BaseEntity
     {
         lock (_lock)
         {
-            List<Entity<T>> entities = new();
+            if (limit is <= 0 or > 5000)
+            {
+                limit = 5000;
+            }
+
+            if (rangeInMeters < 0)
+            {
+                rangeInMeters = 10;
+            }
+
+            List<T> entities = new();
 
             var offsets = _spatialIndex.Offsets(latitude, longitude, rangeInMeters, limit);
 
@@ -97,10 +152,19 @@ public sealed class Repository
                     using var stream = new FileStream(_fileName, FileMode.Open, FileAccess.Read);
                     using var reader = new BinaryReader(stream);
                     reader.BaseStream.Seek(offset, SeekOrigin.Begin);
-                    var entity = Entity<T>.ReadFromBinaryReader(reader);
-                    if (entity == null!) continue;
+                    var length = reader.ReadInt32();
 
-                    entities.Add(entity);
+                    if (length <= 0) continue;
+
+                    var jsonBytes = reader.ReadBytes(length);
+                    var jsonString = Encoding.UTF8.GetString(jsonBytes);
+                    if (string.IsNullOrEmpty(jsonString)) continue;
+
+                    var content = JsonSerializer.Deserialize<T>(jsonString);
+
+                    if (content == null) continue;
+
+                    entities.Add(content);
                 }
                 catch (FileNotFoundException)
                 {
