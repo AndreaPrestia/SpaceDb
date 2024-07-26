@@ -29,22 +29,24 @@ If you want to use the **Repository** class just inject it where you want or ret
 
 This class exposes the following methods:
 
-    - Add(Entity entity)
-    - Find(long start, long end, int limit)
-    - Find(double latitude, double longitude, double rangeInMeters, int limit)
+    - Add<T>(T entity)
+    - Find<T>(long start, long end, int limit)
+    - Find<T>(double latitude, double longitude, double rangeInMeters, int limit)
 
-### Add(Entity entity)
+### Add<T>(T entity)
 
-The **Add** method adds an entity in the storage.
+The **Add<T>** method adds a record of type T in the storage. It must derive from **BaseEntity** abstract record.
 
-### Find(long start, long end, int limit)
+### Find<T>(long start, long end, int limit)
 
-This method finds a subset of **Entity** classes that have the timestamp between **start** and **end** passed as parameters.
+This method finds a subset of **T** records that have the timestamp between **start** and **end** passed as parameters. 
+It must derive from **BaseEntity** abstract record.
 The **limit** parameter is used to limit the number of entities returned.
 
-### Find(double latitude, double longitude, double rangeInMeters, int limit)
+### Find<T>(double latitude, double longitude, double rangeInMeters, int limit)
 
-This method finds a subset of **Entity** classes that are in the **rangeInMeters** of the **latitude** and **longitude** passed as parameters.
+This method finds a subset of **T** records that are in the **rangeInMeters** of the **latitude** and **longitude** passed as parameters.
+It must derive from **BaseEntity** abstract record.
 The **limit** parameter is used to limit the number of entities returned.
 
 ## TODO
@@ -53,4 +55,4 @@ The **limit** parameter is used to limit the number of entities returned.
     - Implement a more robust way to manage read/write.
     - Implement delete function.
     - Implement partition-key/collection management.
-    - Implement search by properties with equals and like.
+    - Implement search by properties in T with equals and like.
