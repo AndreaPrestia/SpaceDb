@@ -1,67 +1,55 @@
-﻿namespace SpaceDb.Core;
+﻿using System.Runtime.Serialization.Formatters.Binary;
+using System.Runtime.Serialization;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Text.Json;
+using System.Text;
 
-public record Entity(long Timestamp, double Latitude, double Longitude, string Name)
+namespace SpaceDb.Core;
+
+public record Entity<T>(long Timestamp, double Latitude, double Longitude)
 {
     public long Timestamp { get; set; } = Timestamp;
     public double Latitude { get; set; } = Latitude;
     public double Longitude { get; set; } = Longitude;
-    public string Name { get; set; } = Name;
-    public Dictionary<string, string> Properties { get; set; } = new();
-
-    public bool SetProperty(string name, string? value)
-    {
-        if (Properties.ContainsKey(name))
-        {
-            if (string.IsNullOrEmpty(value))
-            {
-                return Properties.Remove(name);
-            }
-
-            Properties[name] = value;
-
-            return true;
-        }
-
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        Properties.Add(name, value);
-
-        return true;
-    }
+    public T? Content { get; set; }
 
     public void WriteToBinaryWriter(BinaryWriter writer)
     {
         writer.Write(Timestamp);
         writer.Write(Latitude);
         writer.Write(Longitude);
-        writer.Write(Name);
-        writer.Write(Properties.Count);
-        foreach (var kvp in Properties.Where(kvp => !string.IsNullOrWhiteSpace(kvp.Value)))
+        if (Content != null)
         {
-            writer.Write(kvp.Key);
-            writer.Write(kvp.Value);
+            var jsonString = JsonSerializer.Serialize(Content);
+            var jsonBytes = Encoding.UTF8.GetBytes(jsonString);
+            writer.Write(jsonBytes.Length);
+            writer.Write(jsonBytes);
+        }
+        else
+        {
+            writer.Write(0);
         }
     }
 
-    public static Entity ReadFromBinaryReader(BinaryReader reader)
+    public static Entity<T> ReadFromBinaryReader(BinaryReader reader)
     {
         var timestamp = reader.ReadInt64();
         var latitude = reader.ReadDouble();
         var longitude = reader.ReadDouble();
-        var name = reader.ReadString();
+        var content = default(T);
 
-        var propertyCount = reader.ReadInt32();
-        var properties = new Dictionary<string, string>();
-        for (var i = 0; i < propertyCount; i++)
+        var length = reader.ReadInt32();
+
+        if (length > 0)
         {
-            var key = reader.ReadString();
-            var value = reader.ReadString();
-            properties[key] = value;
+            var jsonBytes = reader.ReadBytes(length);
+            var jsonString = Encoding.UTF8.GetString(jsonBytes);
+            if (!string.IsNullOrEmpty(jsonString))
+            {
+                content = JsonSerializer.Deserialize<T>(jsonString);
+            }
         }
 
-        return new Entity(timestamp, latitude, longitude, name) { Properties = properties };
+        return new Entity<T>(timestamp, latitude, longitude) { Content = content };
     }
 }

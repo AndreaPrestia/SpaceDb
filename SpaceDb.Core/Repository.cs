@@ -10,8 +10,8 @@ public sealed class Repository
     private readonly SpatialIndex _spatialIndex;
     private readonly object _lock = new();
     private readonly ILogger<Repository> _logger;
-    private long _timeSeriesOffset = 0;
-    private long _spatialIndexOffset = 0;
+    private long _timeSeriesOffset;
+    private long _spatialIndexOffset;
 
     private Repository(string fileName, ILogger<Repository> logger)
     {
@@ -26,7 +26,7 @@ public sealed class Repository
         return new Repository(fileName, logger);
     }
 
-    public void Add(Entity entity)
+    public void Add<T>(Entity<T> entity)
     {
         lock (_lock)
         {
@@ -40,11 +40,11 @@ public sealed class Repository
         }
     }
 
-    public IList<Entity> Find(long start, long end, int limit)
+    public IList<Entity<T>> Find<T>(long start, long end, int limit)
     {
         lock (_lock)
         {
-            List<Entity> entities = new();
+            List<Entity<T>> entities = new();
 
             var offsets = _timeSeriesIndex.Offsets(start, end, limit);
 
@@ -57,7 +57,7 @@ public sealed class Repository
                     using var stream = new FileStream(_fileName, FileMode.Open, FileAccess.Read);
                     using var reader = new BinaryReader(stream);
                     reader.BaseStream.Seek(offset, SeekOrigin.Begin);
-                    var entity = Entity.ReadFromBinaryReader(reader);
+                    var entity = Entity<T>.ReadFromBinaryReader(reader);
                     if (entity == null!) continue;
 
                     entities.Add(entity);
@@ -80,11 +80,11 @@ public sealed class Repository
         }
     }
 
-    public IList<Entity> Find(double latitude, double longitude, double rangeInMeters, int limit)
+    public IList<Entity<T>> Find<T>(double latitude, double longitude, double rangeInMeters, int limit)
     {
         lock (_lock)
         {
-            List<Entity> entities = new();
+            List<Entity<T>> entities = new();
 
             var offsets = _spatialIndex.Offsets(latitude, longitude, rangeInMeters, limit);
 
@@ -97,7 +97,7 @@ public sealed class Repository
                     using var stream = new FileStream(_fileName, FileMode.Open, FileAccess.Read);
                     using var reader = new BinaryReader(stream);
                     reader.BaseStream.Seek(offset, SeekOrigin.Begin);
-                    var entity = Entity.ReadFromBinaryReader(reader);
+                    var entity = Entity<T>.ReadFromBinaryReader(reader);
                     if (entity == null!) continue;
 
                     entities.Add(entity);
