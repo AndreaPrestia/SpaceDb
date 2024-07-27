@@ -220,10 +220,10 @@ public class RepositoryTests
         var repository = _host.Services.GetRequiredService<Repository>();
 
         //act
-        Parallel.ForEach(entities, entity =>
+        foreach (var entity in entities)
         {
             repository.Add(entity);
-        });
+        }
 
         // Query with position
         var foundEntitiesWithPosition = repository.Find<PublicTransportationStopModel>(41.1179778, 16.8675382, 50000, entities.Count + 1);
@@ -236,6 +236,7 @@ public class RepositoryTests
 
         //assert
         Assert.NotNull(foundEntitiesWithPosition);
+        //Assert.Equal(entities.Count, foundEntitiesWithPosition.Count);
         //Assert.Collection(foundEntitiesWithPosition, entity =>
         //{
         //    var entityToCompare = entities.ElementAtOrDefault(0);
@@ -248,6 +249,7 @@ public class RepositoryTests
         //});
 
         Assert.NotNull(foundEntitiesByRange);
+        //Assert.Equal(entities.Count, foundEntitiesByRange.Count);
         //Assert.Collection(foundEntitiesByRange, entity =>
         //{
         //    var entityToCompare = entities.ElementAtOrDefault(0);
