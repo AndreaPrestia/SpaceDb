@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using SpaceDb.Core;
 using SpaceDb.Core.Extensions;
+using System.Text.Json;
 
 namespace SpaceDb.Tests;
 
@@ -188,6 +189,123 @@ public class RepositoryTests
     }
 
     [Fact]
+    public void Flow_Ok_Lot_Of_Data()
+    {
+        //arrange
+        if (File.Exists(_fileName))
+        {
+            File.Delete(_fileName);
+        }
+
+        if (File.Exists("timeSeriesIndex.dat"))
+        {
+            File.Delete("timeSeriesIndex.dat");
+        }
+
+        if (File.Exists("spatialIndex.dat"))
+        {
+            File.Delete("spatialIndex.dat");
+        }
+
+        var fileContentL1Amtab = File.ReadAllText("DataSets/stops_AMTAB_L1.json");
+        var fileContentL1Fnb = File.ReadAllText("DataSets/stops_FNB_L1.json");
+        var fileContentL2Fnb = File.ReadAllText("DataSets/stops_FNB_L2.json");
+
+        var entitiesAmtabL1 = JsonSerializer.Deserialize<List<PublicTransportationStopModel>>(fileContentL1Amtab) ?? throw new ArgumentNullException("stops_AMTAB_L1.json");
+        var entitiesFnbL1 = JsonSerializer.Deserialize<List<PublicTransportationStopModel>>(fileContentL1Fnb) ?? throw new ArgumentNullException("stops_FNB_L1.json");
+        var entitiesFnbL2 = JsonSerializer.Deserialize<List<PublicTransportationStopModel>>(fileContentL2Fnb) ?? throw new ArgumentNullException("stops_FNB_L2.json");
+
+        var entities = entitiesAmtabL1.Concat(entitiesFnbL1).Concat(entitiesFnbL2).ToList();
+
+        var repository = _host.Services.GetRequiredService<Repository>();
+
+        //act
+        Parallel.ForEach(entities, entity =>
+        {
+            repository.Add(entity);
+        });
+
+        // Query with position
+        var foundEntitiesWithPosition = repository.Find<PublicTransportationStopModel>(41.1179778, 16.8675382, 50000, entities.Count + 1);
+
+        var end = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        var start = DateTimeOffset.UtcNow.AddHours(-10).ToUnixTimeMilliseconds();
+        // Query with timestamp
+        var foundEntitiesByRange = repository.Find<PublicTransportationStopModel>(start, end, 10);
+
+        //assert
+        Assert.NotNull(foundEntitiesWithPosition);
+        //Assert.Collection(foundEntitiesWithPosition, entity =>
+        //{
+        //    var entityToCompare = entities.ElementAtOrDefault(0);
+        //    Assert.NotNull(entityToCompare);
+        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
+        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
+        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
+        //    Assert.Equal(entityToCompare.Name, entity.Name);
+        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
+        //});
+
+        Assert.NotNull(foundEntitiesByRange);
+        //Assert.Collection(foundEntitiesByRange, entity =>
+        //{
+        //    var entityToCompare = entities.ElementAtOrDefault(0);
+        //    Assert.NotNull(entityToCompare);
+        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
+        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
+        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
+        //    Assert.Equal(entityToCompare.Name, entity.Name);
+        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
+        //}, entity =>
+        //{
+        //    var entityToCompare = entities.ElementAtOrDefault(1);
+        //    Assert.NotNull(entityToCompare);
+        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
+        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
+        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
+        //    Assert.Equal(entityToCompare.Name, entity.Name);
+        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
+        //}, entity =>
+        //{
+        //    var entityToCompare = entities.ElementAtOrDefault(2);
+        //    Assert.NotNull(entityToCompare);
+        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
+        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
+        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
+        //    Assert.Equal(entityToCompare.Name, entity.Name);
+        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
+        //}, entity =>
+        //{
+        //    var entityToCompare = entities.ElementAtOrDefault(3);
+        //    Assert.NotNull(entityToCompare);
+        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
+        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
+        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
+        //    Assert.Equal(entityToCompare.Name, entity.Name);
+        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
+        //}, entity =>
+        //{
+        //    var entityToCompare = entities.ElementAtOrDefault(4);
+        //    Assert.NotNull(entityToCompare);
+        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
+        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
+        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
+        //    Assert.Equal(entityToCompare.Name, entity.Name);
+        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
+        //}, entity =>
+        //{
+        //    var entityToCompare = entities.ElementAtOrDefault(5);
+        //    Assert.NotNull(entityToCompare);
+        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
+        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
+        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
+        //    Assert.Equal(entityToCompare.Name, entity.Name);
+        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
+        //});
+    }
+
+    [Fact]
     public void Add_Entity_Null_Ko()
     {
         //arrange
@@ -204,5 +322,37 @@ public class RepositoryTests
     {
         public string Name { get; set; } = string.Empty;
         public List<string> PoIs { get; set; } = new();
+    }
+
+    public record PublicTransportationStopModel : BaseEntity
+    {
+        public string Id { get; set; } = null!;
+        public string Code { get; set; } = null!;
+        public string Name { get; set; } = null!;
+        public double Distance { get; set; }
+        public int WalkingTime { get; set; }
+        public bool WheelChairBoarding { get; set; }
+        public string Type { get; set; } = null!;
+        public List<PublicTransportationRouteModel> Routes { get; set; } = new();
+    }
+
+    public record PublicTransportationRouteModel
+    {
+        public string Id { get; set; } = null!;
+        public string Agency { get; set; } = null!;
+        public string Name { get; set; } = null!;
+        public string Type { get; set; } = null!;
+        public List<PublicTransportationTripModel> Trips { get; set; } = new();
+    }
+
+    public record PublicTransportationTripModel
+    {
+        public string Id { get; set; } = null!;
+        public string RouteId { get; set; } = null!;
+        public string HeadSign { get; set; } = null!;
+        public int Direction { get; set; }
+        public bool WheelChairAccessible { get; set; }
+        public bool Exceptional { get; set; }
+        public List<long> StopTimes { get; set; } = new();
     }
 }
