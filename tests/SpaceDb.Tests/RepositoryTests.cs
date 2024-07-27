@@ -226,85 +226,20 @@ public class RepositoryTests
         }
 
         // Query with position
-        var foundEntitiesWithPosition = repository.Find<PublicTransportationStopModel>(41.1179778, 16.8675382, 50000, entities.Count + 1);
+        var foundEntitiesWithPosition = repository.Find<PublicTransportationStopModel>(41.1179778, 16.8675382, 150000, entities.Count + 1);
 
         var end = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
         var start = DateTimeOffset.UtcNow.AddHours(-10).ToUnixTimeMilliseconds();
         // Query with timestamp
-        var foundEntitiesByRange = repository.Find<PublicTransportationStopModel>(start, end, 10);
+        var foundEntitiesByRange = repository.Find<PublicTransportationStopModel>(start, end, entities.Count + 1);
 
         //assert
         Assert.NotNull(foundEntitiesWithPosition);
         //Assert.Equal(entities.Count, foundEntitiesWithPosition.Count);
-        //Assert.Collection(foundEntitiesWithPosition, entity =>
-        //{
-        //    var entityToCompare = entities.ElementAtOrDefault(0);
-        //    Assert.NotNull(entityToCompare);
-        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
-        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
-        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-        //    Assert.Equal(entityToCompare.Name, entity.Name);
-        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
-        //});
 
         Assert.NotNull(foundEntitiesByRange);
-        //Assert.Equal(entities.Count, foundEntitiesByRange.Count);
-        //Assert.Collection(foundEntitiesByRange, entity =>
-        //{
-        //    var entityToCompare = entities.ElementAtOrDefault(0);
-        //    Assert.NotNull(entityToCompare);
-        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
-        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
-        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-        //    Assert.Equal(entityToCompare.Name, entity.Name);
-        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
-        //}, entity =>
-        //{
-        //    var entityToCompare = entities.ElementAtOrDefault(1);
-        //    Assert.NotNull(entityToCompare);
-        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
-        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
-        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-        //    Assert.Equal(entityToCompare.Name, entity.Name);
-        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
-        //}, entity =>
-        //{
-        //    var entityToCompare = entities.ElementAtOrDefault(2);
-        //    Assert.NotNull(entityToCompare);
-        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
-        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
-        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-        //    Assert.Equal(entityToCompare.Name, entity.Name);
-        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
-        //}, entity =>
-        //{
-        //    var entityToCompare = entities.ElementAtOrDefault(3);
-        //    Assert.NotNull(entityToCompare);
-        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
-        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
-        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-        //    Assert.Equal(entityToCompare.Name, entity.Name);
-        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
-        //}, entity =>
-        //{
-        //    var entityToCompare = entities.ElementAtOrDefault(4);
-        //    Assert.NotNull(entityToCompare);
-        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
-        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
-        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-        //    Assert.Equal(entityToCompare.Name, entity.Name);
-        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
-        //}, entity =>
-        //{
-        //    var entityToCompare = entities.ElementAtOrDefault(5);
-        //    Assert.NotNull(entityToCompare);
-        //    Assert.Equal(entityToCompare.Timestamp, entity.Timestamp);
-        //    Assert.Equal(entityToCompare.Latitude, entity.Latitude);
-        //    Assert.Equal(entityToCompare.Longitude, entity.Longitude);
-        //    Assert.Equal(entityToCompare.Name, entity.Name);
-        //    Assert.True(entityToCompare.PoIs.SequenceEqual(entity.PoIs));
-        //});
+        Assert.Equal(entities.Count, foundEntitiesByRange.Count);
     }
 
     [Fact]
