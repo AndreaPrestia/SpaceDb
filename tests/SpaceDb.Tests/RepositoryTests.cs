@@ -222,6 +222,7 @@ public class RepositoryTests
         //act
         foreach (var entity in entities)
         {
+            entity.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             repository.Add(entity);
         }
 
@@ -230,13 +231,13 @@ public class RepositoryTests
 
         var end = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        var start = DateTimeOffset.UtcNow.AddHours(-10).ToUnixTimeMilliseconds();
+        var start = DateTimeOffset.UtcNow.AddHours(-3).ToUnixTimeMilliseconds();
         // Query with timestamp
         var foundEntitiesByRange = repository.Find<PublicTransportationStopModel>(start, end, entities.Count + 1);
 
         //assert
         Assert.NotNull(foundEntitiesWithPosition);
-        //Assert.Equal(entities.Count, foundEntitiesWithPosition.Count);
+        Assert.Equal(entities.Count, foundEntitiesWithPosition.Count);
 
         Assert.NotNull(foundEntitiesByRange);
         Assert.Equal(entities.Count, foundEntitiesByRange.Count);

@@ -40,7 +40,6 @@ public class SpatialIndex
             }
 
             WriteToFile(_offsets);
-
         }
     }
 
