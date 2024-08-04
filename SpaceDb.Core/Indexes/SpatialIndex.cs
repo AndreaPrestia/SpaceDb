@@ -18,22 +18,19 @@ public class SpatialIndex
     {
         lock (_lock)
         {
-            if (_offsets.Any())
+            if (!_offsets.Any())
             {
                 LoadIndex();
             }
 
+            var key = Tuple.Create(latitude, longitude);
             if (_offsets.TryGetValue(new Tuple<double, double>(latitude, longitude), out var result))
             {
-                if (result.Any(x => x == offset))
-                {
-                    return;
-                }
-                _offsets[Tuple.Create(latitude, longitude)].Add(offset);
+                _offsets[key].Add(offset);
             }
             else
             {
-                _offsets.Add(Tuple.Create(latitude, longitude), new List<long>()
+                _offsets.Add(key, new List<long>()
                 {
                     offset
                 });
@@ -87,8 +84,14 @@ public class SpatialIndex
     {
         var dictionary = new Dictionary<Tuple<double, double>, List<long>>();
 
-        using var fileStream = new FileStream(_filePath, FileMode.Open, FileAccess.Read);
+        using var fileStream = new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.Read);
         using var reader = new BinaryReader(fileStream);
+
+        if (reader.BaseStream.Length == 0)
+        {
+            return new();
+        }
+
         var count = reader.ReadInt32();
 
         for (var i = 0; i < count; i++)
