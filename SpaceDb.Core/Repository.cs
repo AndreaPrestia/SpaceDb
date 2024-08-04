@@ -19,8 +19,8 @@ public sealed class Repository
     {
         _fileName = fileName;
         _logger = logger;
-        _timeSeriesIndex = new TimeSeriesIndex("timeSeriesIndex.dat");
-        _spatialIndex = new SpatialIndex("spatialIndex.dat");
+        _timeSeriesIndex = new TimeSeriesIndex("timeSeriesIndex.db");
+        _spatialIndex = new SpatialIndex("spatialIndex.db");
     }
 
     internal static Repository Create(string fileName, ILogger<Repository> logger)

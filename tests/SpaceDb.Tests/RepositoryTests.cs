@@ -9,7 +9,7 @@ namespace SpaceDb.Tests;
 public class RepositoryTests
 {
     private readonly IHost _host;
-    private readonly string _fileName = "testData.dat";
+    private readonly string _fileName = "testData.db";
 
     public RepositoryTests()
     {
@@ -30,14 +30,14 @@ public class RepositoryTests
             File.Delete(_fileName);
         }
 
-        if (File.Exists("timeSeriesIndex.dat"))
+        if (File.Exists("timeSeriesIndex.db"))
         {
-            File.Delete("timeSeriesIndex.dat");
+            File.Delete("timeSeriesIndex.db");
         }
 
-        if (File.Exists("spatialIndex.dat"))
+        if (File.Exists("spatialIndex.db"))
         {
-            File.Delete("spatialIndex.dat");
+            File.Delete("spatialIndex.db");
         }
 
         var entities = new List<City>
@@ -197,14 +197,14 @@ public class RepositoryTests
             File.Delete(_fileName);
         }
 
-        if (File.Exists("timeSeriesIndex.dat"))
+        if (File.Exists("timeSeriesIndex.db"))
         {
-            File.Delete("timeSeriesIndex.dat");
+            File.Delete("timeSeriesIndex.db");
         }
 
-        if (File.Exists("spatialIndex.dat"))
+        if (File.Exists("spatialIndex.db"))
         {
-            File.Delete("spatialIndex.dat");
+            File.Delete("spatialIndex.db");
         }
 
         var fileContentL1Amtab = File.ReadAllText("DataSets/stops_AMTAB_L1.json");
