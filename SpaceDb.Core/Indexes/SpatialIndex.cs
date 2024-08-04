@@ -4,27 +4,28 @@ namespace SpaceDb.Core.Indexes;
 
 public class SpatialIndex
 {
-    private readonly string _filePath;
-    private Dictionary<Tuple<double, double>, List<long>> _offsets;
+    private readonly string _filePath = "spatialIndex_{0}.db";
+    private Dictionary<Tuple<string, double, double>, List<long>> _offsets;
     private readonly object _lock = new();
 
-    public SpatialIndex(string filePath)
+    public SpatialIndex()
     {
-        _filePath = filePath;
-        _offsets = new Dictionary<Tuple<double, double>, List<long>>();
+        _offsets = new Dictionary<Tuple<string, double, double>, List<long>>();
     }
 
-    internal void Add(double latitude, double longitude, long offset)
+    internal void Add<T>(double latitude, double longitude, long offset) where T : BaseEntity
     {
         lock (_lock)
         {
             if (!_offsets.Any())
             {
-                LoadIndex();
+                LoadIndex<T>();
             }
 
-            var key = Tuple.Create(latitude, longitude);
-            if (_offsets.TryGetValue(new Tuple<double, double>(latitude, longitude), out var result))
+            var typeName = typeof(T).Name;
+
+            var key = Tuple.Create(typeName, latitude, longitude);
+            if (_offsets.TryGetValue(key, out var result))
             {
                 _offsets[key].Add(offset);
             }
@@ -36,37 +37,71 @@ public class SpatialIndex
                 });
             }
 
-            WriteToFile(_offsets);
+            WriteToFile<T>(_offsets);
         }
     }
 
-    internal List<long> Offsets(double latitude, double longitude, double rangeInMeters, int limit)
+    internal List<long> Offsets<T>(double latitude, double longitude, double rangeInMeters, int limit) where T : BaseEntity
     {
         lock (_lock)
         {
             if (!_offsets.Any())
             {
-                LoadIndex();
+                LoadIndex<T>();
             }
 
+            var typeName = typeof(T).Name;
+
             return _offsets
-                .Where(kvp => GeoUtils.HaversineDistance(
+                .Where(kvp => kvp.Key.Item1 == typeName && GeoUtils.HaversineDistance(
                     latitude, longitude,
-                    kvp.Key.Item1, kvp.Key.Item2) <= rangeInMeters)
+                    kvp.Key.Item2, kvp.Key.Item3) <= rangeInMeters)
                 .Take(limit)
                 .SelectMany(e => e.Value)
                 .ToList();
         }
     }
     
-    private void LoadIndex()
+    private void LoadIndex<T>() where T : BaseEntity
     {
-        _offsets = ReadFromFile();
+        var typeName = typeof(T).Name;
+        var dictionary = new Dictionary<Tuple<string, double, double>, List<long>>();
+
+        using var fileStream = new FileStream(string.Format(_filePath, typeName), FileMode.OpenOrCreate, FileAccess.Read);
+        using var reader = new BinaryReader(fileStream);
+
+        if (reader.BaseStream.Length == 0)
+        {
+            return;
+        }
+
+        var count = reader.ReadInt32();
+
+        for (var i = 0; i < count; i++)
+        {
+            var item1 = reader.ReadDouble();
+            var item2 = reader.ReadDouble();
+            var value = reader.ReadInt64();
+            var key = Tuple.Create(typeName, item1, item2);
+
+            if (_offsets.TryGetValue(key, out var value1))
+            {
+                value1.Add(value);
+            }
+            else
+            {
+                _offsets.Add(key, new List<long>()
+                {
+                    value
+                });
+            }
+        }
     }
 
-    private void WriteToFile(Dictionary<Tuple<double, double>, List<long>> dictionary)
+    private void WriteToFile<T>(Dictionary<Tuple<string, double, double>, List<long>> dictionary) where T : BaseEntity
     {
-        using var fileStream = new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.Write);
+        var typeName = typeof(T).Name;
+        using var fileStream = new FileStream(string.Format(_filePath, typeName), FileMode.OpenOrCreate, FileAccess.Write);
         using var writer = new BinaryWriter(fileStream);
         writer.Write(dictionary.Count);
 
@@ -79,41 +114,5 @@ public class SpatialIndex
                 writer.Write(value);
             }
         }
-    }
-    private Dictionary<Tuple<double, double>, List<long>> ReadFromFile()
-    {
-        var dictionary = new Dictionary<Tuple<double, double>, List<long>>();
-
-        using var fileStream = new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.Read);
-        using var reader = new BinaryReader(fileStream);
-
-        if (reader.BaseStream.Length == 0)
-        {
-            return new();
-        }
-
-        var count = reader.ReadInt32();
-
-        for (var i = 0; i < count; i++)
-        {
-            var item1 = reader.ReadDouble();
-            var item2 = reader.ReadDouble();
-            var value = reader.ReadInt64();
-            var key = Tuple.Create(item1, item2);
-
-            if (dictionary.TryGetValue(key, out var value1))
-            {
-                value1.Add(value);
-            }
-            else
-            {
-                dictionary.Add(Tuple.Create(item1, item2), new List<long>()
-                {
-                    value
-                });
-            }
-        }
-
-        return dictionary;
     }
 }

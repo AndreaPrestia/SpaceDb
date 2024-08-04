@@ -12,15 +12,15 @@ public sealed class Repository
     private readonly SpatialIndex _spatialIndex;
     private readonly object _lock = new();
     private readonly ILogger<Repository> _logger;
-    private long _timeSeriesOffset;
-    private long _spatialIndexOffset;
+    private Dictionary<string, long> _timeSeriesOffset = new();
+    private Dictionary<string, long> _spatialIndexOffset = new();
 
     private Repository(string fileName, ILogger<Repository> logger)
     {
         _fileName = fileName;
         _logger = logger;
-        _timeSeriesIndex = new TimeSeriesIndex("timeSeriesIndex.db");
-        _spatialIndex = new SpatialIndex("spatialIndex.db");
+        _timeSeriesIndex = new TimeSeriesIndex();
+        _spatialIndex = new SpatialIndex();
     }
 
     internal static Repository Create(string fileName, ILogger<Repository> logger)
@@ -41,16 +41,30 @@ public sealed class Repository
 
         lock (_lock)
         {
+            var typeName = typeof(T).Name;
+
             using var stream = new FileStream(_fileName, FileMode.Append, FileAccess.Write);
             using var writer = new BinaryWriter(stream);
             var jsonString = JsonSerializer.Serialize(entity);
             var jsonBytes = Encoding.UTF8.GetBytes(jsonString);
             writer.Write(jsonBytes.Length);
             writer.Write(jsonBytes);
-            _timeSeriesIndex.Add(entity.Timestamp, _timeSeriesOffset);
-            _spatialIndex.Add(entity.Latitude, entity.Longitude, _spatialIndexOffset);
-            _timeSeriesOffset = writer.BaseStream.Position;
-            _spatialIndexOffset = writer.BaseStream.Position;
+            var timeSeriesOffset = _timeSeriesOffset.ContainsKey(typeName) ? _timeSeriesOffset[typeName] : 0;
+            var spatialIndexOffset = _spatialIndexOffset.ContainsKey(typeName) ? _spatialIndexOffset[typeName] : 0;
+            _timeSeriesIndex.Add<T>(entity.Timestamp, timeSeriesOffset);
+            _spatialIndex.Add<T>(entity.Latitude, entity.Longitude, spatialIndexOffset);
+
+            var position = writer.BaseStream.Position;
+
+            if (!_timeSeriesOffset.TryAdd(typeName, position))
+            {
+                _timeSeriesOffset[typeName] = position;
+            }
+
+            if (!_spatialIndexOffset.TryAdd(typeName, position))
+            {
+                _spatialIndexOffset[typeName] = position;
+            }
         }
     }
 
@@ -73,7 +87,7 @@ public sealed class Repository
 
             List<T> entities = new();
 
-            var offsets = _timeSeriesIndex.Offsets(start, end, limit);
+            var offsets = _timeSeriesIndex.Offsets<T>(start, end, limit);
 
             if (!offsets.Any()) return entities;
             
@@ -141,7 +155,7 @@ public sealed class Repository
 
             List<T> entities = new();
 
-            var offsets = _spatialIndex.Offsets(latitude, longitude, rangeInMeters, limit);
+            var offsets = _spatialIndex.Offsets<T>(latitude, longitude, rangeInMeters, limit);
 
             if (!offsets.Any()) return entities;
             

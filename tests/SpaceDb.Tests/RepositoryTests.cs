@@ -30,14 +30,14 @@ public class RepositoryTests
             File.Delete(_fileName);
         }
 
-        if (File.Exists("timeSeriesIndex.db"))
+        if (File.Exists("timeSeriesIndex_City.db"))
         {
-            File.Delete("timeSeriesIndex.db");
+            File.Delete("timeSeriesIndex_City.db");
         }
 
-        if (File.Exists("spatialIndex.db"))
+        if (File.Exists("spatialIndex_City.db"))
         {
-            File.Delete("spatialIndex.db");
+            File.Delete("spatialIndex_City.db");
         }
 
         var entities = new List<City>
@@ -197,14 +197,14 @@ public class RepositoryTests
             File.Delete(_fileName);
         }
 
-        if (File.Exists("timeSeriesIndex.db"))
+        if (File.Exists("timeSeriesIndex_PublicTransportationStopModel.db"))
         {
-            File.Delete("timeSeriesIndex.db");
+            File.Delete("timeSeriesIndex_PublicTransportationStopModel.db");
         }
 
-        if (File.Exists("spatialIndex.db"))
+        if (File.Exists("spatialIndex_PublicTransportationStopModel.db"))
         {
-            File.Delete("spatialIndex.db");
+            File.Delete("spatialIndex_PublicTransportationStopModel.db");
         }
 
         var fileContentL1Amtab = File.ReadAllText("DataSets/stops_AMTAB_L1.json");
